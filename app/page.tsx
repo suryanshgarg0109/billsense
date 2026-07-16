@@ -145,7 +145,18 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-line py-5">
-        <p className="mx-auto max-w-6xl px-6 text-center text-[12px] text-ink-muted">
+        <p className="mx-auto max-w-6xl px-6 text-center text-[13px] font-medium">
+          Made by{" "}
+          <a
+            href="https://github.com/suryanshgarg0109"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent underline decoration-amber-300 underline-offset-4 hover:decoration-amber-500"
+          >
+            Suryansh Garg
+          </a>
+        </p>
+        <p className="mx-auto mt-1.5 max-w-6xl px-6 text-center text-[12px] text-ink-muted">
           BillSense is a product prototype. Sample bills are synthetic specimens, not real
           documents. Extracted data stays in your browser session — nothing is stored.
         </p>

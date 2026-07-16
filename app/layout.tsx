@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "BillSense — electricity bills, understood in seconds",
   description:
     "Upload an electricity bill and get structured data, business insights, and export-ready output in seconds. AI document understanding, not OCR.",
+  authors: [{ name: "Suryansh Garg", url: "https://github.com/suryanshgarg0109" }],
 };
 
 export default function RootLayout({
