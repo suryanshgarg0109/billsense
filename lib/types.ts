@@ -96,3 +96,14 @@ export interface AnalyzeResponse {
 export interface AnalyzeError {
   error: string;
 }
+
+/** One bill inside a batch run — client-side state for the portfolio view. */
+export interface BatchItem {
+  id: string;
+  name: string;
+  url: string; // object URL for the document preview
+  type: string; // mime type
+  status: "queued" | "processing" | "done" | "error";
+  response?: AnalyzeResponse;
+  error?: string;
+}

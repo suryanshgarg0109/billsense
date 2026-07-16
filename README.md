@@ -10,11 +10,12 @@ The emphasis is **document understanding, not OCR**: the AI reasons about tariff
 
 ## How it works
 
-1. **Upload** any electricity bill (PDF, PNG, JPEG, WebP — scanned copies work).
+1. **Upload** any electricity bill (PDF, PNG, JPEG, WebP — scanned copies work), or drop **up to 10 bills at once** for batch mode.
 2. Gemini analyzes the document against a strict extraction schema: provider, consumer, billing period, meter readings, every charge line itemized and categorized, totals, due dates.
 3. The same pass produces **business insights**: unusually high unit cost, demand-charge share, penalties detected, arrears, expiring rebates — each grounded in numbers actually on the bill.
 4. Fields the model can't find are reported as *missing*; fields it can't read confidently are *flagged* — uncertainty is communicated, never papered over.
 5. Export the structured result as CSV or JSON.
+6. **Batch mode**: multiple bills stream into a live portfolio table — combined spend, combined units, per-bill flags — with a one-click combined CSV and drill-down into any bill's full analysis. This is the month-end workflow for a multi-site finance team, eliminated.
 
 ## Try it without a bill
 
@@ -24,7 +25,7 @@ Three synthetic specimen bills are bundled (fictional utilities, realistic layou
 - **Commercial office** — arrears, late-payment surcharge, excess-demand penalty
 - **Industrial HT unit** — TOD tariff, CT/PT multiplier, power-factor penalty
 
-Regenerate them anytime with `node scripts/generate-samples.js`.
+Or hit **"⚡ All 3 as a batch"** to see the portfolio view in one click. Regenerate the specimens anytime with `node scripts/generate-samples.js`.
 
 ## Stack
 

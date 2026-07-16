@@ -6,10 +6,11 @@ import { Ambient } from "@/components/Ambient";
 import { UploadZone } from "@/components/UploadZone";
 import { ProcessingView } from "@/components/ProcessingView";
 import { ResultsView } from "@/components/ResultsView";
-import type { AnalyzeResponse } from "@/lib/types";
-import type { SampleBill } from "@/lib/samples";
+import { BatchView } from "@/components/BatchView";
+import type { AnalyzeResponse, BatchItem } from "@/lib/types";
+import { SAMPLE_BILLS, type SampleBill } from "@/lib/samples";
 
-type Phase = "idle" | "processing" | "done";
+type Phase = "idle" | "processing" | "done" | "batch";
 
 interface LoadedFile {
   name: string;
@@ -18,55 +19,63 @@ interface LoadedFile {
 }
 
 const MIN_PROCESSING_MS = 2600; // let the processing story land even on fast responses
+const MAX_BATCH = 10;
+
+async function requestAnalysis(f: File, signal: AbortSignal): Promise<AnalyzeResponse> {
+  const body = new FormData();
+  body.append("file", f);
+  const res = await fetch("/api/analyze", { method: "POST", body, signal });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Something went wrong.");
+  return json as AnalyzeResponse;
+}
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [file, setFile] = useState<LoadedFile | null>(null);
   const [response, setResponse] = useState<AnalyzeResponse | null>(null);
+  const [batch, setBatch] = useState<BatchItem[]>([]);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const objectUrl = useRef<string | null>(null);
+  const objectUrls = useRef<string[]>([]);
   const inFlight = useRef<AbortController | null>(null);
+
+  const trackUrl = (f: File) => {
+    const url = URL.createObjectURL(f);
+    objectUrls.current.push(url);
+    return url;
+  };
 
   const reset = useCallback(() => {
     inFlight.current?.abort();
     inFlight.current = null;
-    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    objectUrl.current = null;
+    objectUrls.current.forEach((u) => URL.revokeObjectURL(u));
+    objectUrls.current = [];
     setPhase("idle");
     setFile(null);
     setResponse(null);
+    setBatch([]);
+    setOpenIdx(null);
     setError(null);
   }, []);
 
-  const analyze = useCallback(async (f: File) => {
+  const analyzeSingle = useCallback(async (f: File) => {
     setError(null);
-    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    const url = URL.createObjectURL(f);
-    objectUrl.current = url;
-    setFile({ name: f.name, url, type: f.type });
+    setFile({ name: f.name, url: trackUrl(f), type: f.type });
     setPhase("processing");
 
     const controller = new AbortController();
     inFlight.current = controller;
-    const body = new FormData();
-    body.append("file", f);
     const started = Date.now();
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        body,
-        signal: controller.signal,
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Something went wrong.");
-
+      const result = await requestAnalysis(f, controller.signal);
       const elapsed = Date.now() - started;
       if (elapsed < MIN_PROCESSING_MS) {
         await new Promise((r) => setTimeout(r, MIN_PROCESSING_MS - elapsed));
       }
       if (controller.signal.aborted) return; // user went back mid-flight
-      setResponse(json as AnalyzeResponse);
+      setResponse(result);
       setPhase("done");
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -77,31 +86,105 @@ export default function Home() {
     }
   }, []);
 
-  // Escape always brings you back to the upload screen.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") reset();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [reset]);
+  const analyzeBatch = useCallback(async (files: File[]) => {
+    setError(null);
+    const controller = new AbortController();
+    inFlight.current = controller;
+
+    const items: BatchItem[] = files.map((f, i) => ({
+      id: `${i}-${f.name}`,
+      name: f.name,
+      url: trackUrl(f),
+      type: f.type,
+      status: "queued",
+    }));
+    setBatch(items);
+    setOpenIdx(null);
+    setPhase("batch");
+
+    // Sequential on purpose: keeps us friendly with free-tier rate limits and
+    // lets the portfolio table fill in row by row.
+    for (let i = 0; i < files.length; i++) {
+      if (controller.signal.aborted) return;
+      setBatch((prev) =>
+        prev.map((it, j) => (j === i ? { ...it, status: "processing" } : it))
+      );
+      try {
+        const result = await requestAnalysis(files[i], controller.signal);
+        if (controller.signal.aborted) return;
+        setBatch((prev) =>
+          prev.map((it, j) => (j === i ? { ...it, status: "done", response: result } : it))
+        );
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setBatch((prev) =>
+          prev.map((it, j) =>
+            j === i
+              ? {
+                  ...it,
+                  status: "error",
+                  error: e instanceof Error ? e.message : "Analysis failed.",
+                }
+              : it
+          )
+        );
+      }
+    }
+    if (inFlight.current === controller) inFlight.current = null;
+  }, []);
+
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      const capped = files.slice(0, MAX_BATCH);
+      if (capped.length === 1) void analyzeSingle(capped[0]);
+      else void analyzeBatch(capped);
+    },
+    [analyzeSingle, analyzeBatch]
+  );
+
+  const fetchSample = async (sample: SampleBill): Promise<File> => {
+    const res = await fetch(sample.path);
+    if (!res.ok) throw new Error("Sample bill could not be loaded.");
+    const blob = await res.blob();
+    return new File([blob], `${sample.id}-sample-bill.pdf`, { type: "application/pdf" });
+  };
 
   const analyzeSample = useCallback(
     async (sample: SampleBill) => {
       try {
-        const res = await fetch(sample.path);
-        if (!res.ok) throw new Error("Sample bill could not be loaded.");
-        const blob = await res.blob();
-        const f = new File([blob], `${sample.id}-sample-bill.pdf`, {
-          type: "application/pdf",
-        });
-        void analyze(f);
+        void analyzeSingle(await fetchSample(sample));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Sample bill could not be loaded.");
       }
     },
-    [analyze]
+    [analyzeSingle]
   );
+
+  const analyzeSampleBatch = useCallback(async () => {
+    try {
+      const files = await Promise.all(SAMPLE_BILLS.map(fetchSample));
+      void analyzeBatch(files);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sample bills could not be loaded.");
+    }
+  }, [analyzeBatch]);
+
+  // Back = one level up: drill-down closes first, otherwise return to upload.
+  const goBack = useCallback(() => {
+    if (phase === "batch" && openIdx !== null) setOpenIdx(null);
+    else reset();
+  }, [phase, openIdx, reset]);
+
+  // Escape always steps back.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") goBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goBack]);
+
+  const openItem = openIdx !== null ? batch[openIdx] : null;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -119,7 +202,7 @@ export default function Home() {
           {phase !== "idle" && (
             <button
               type="button"
-              onClick={reset}
+              onClick={goBack}
               className="animate-fade-up flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-4 py-1.5 text-[13px] font-medium transition-all hover:border-ink hover:-translate-y-px active:translate-y-0"
             >
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -152,9 +235,9 @@ export default function Home() {
               understood in seconds.
             </h1>
             <p className="mx-auto mt-5 max-w-lg text-pretty text-[17px] leading-relaxed text-ink-soft">
-              Upload any electricity bill — PDF or photo. BillSense reads it like an
-              analyst: structured data, cost insights, and export-ready output. No more
-              manual data entry.
+              Upload electricity bills — PDF or photo, one or a whole batch. BillSense reads
+              them like an analyst: structured data, cost insights, and export-ready output.
+              No more manual data entry.
             </p>
 
             {error && (
@@ -164,14 +247,18 @@ export default function Home() {
             )}
 
             <div className="mt-10">
-              <UploadZone onFile={analyze} onSample={analyzeSample} />
+              <UploadZone
+                onFiles={handleFiles}
+                onSample={analyzeSample}
+                onSampleBatch={analyzeSampleBatch}
+              />
             </div>
 
             <div className="mx-auto mt-14 grid max-w-xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
               {[
                 ["Understands, not scans", "Tariffs, penalties and anomalies — not just text."],
                 ["Honest about uncertainty", "Unclear fields are flagged, never invented."],
-                ["Spreadsheet-ready", "One click to CSV or JSON for your tracker."],
+                ["Spreadsheet-ready", "Batch bills into one comparison table and CSV."],
               ].map(([title, detail], i) => (
                 <div
                   key={title}
@@ -195,6 +282,23 @@ export default function Home() {
         {phase === "done" && response && file && (
           <div className="pt-2">
             <ResultsView response={response} file={file} onReset={reset} />
+          </div>
+        )}
+
+        {phase === "batch" && !openItem && (
+          <div className="pt-2">
+            <BatchView items={batch} onOpen={setOpenIdx} onReset={reset} />
+          </div>
+        )}
+
+        {phase === "batch" && openItem?.response && (
+          <div className="pt-2">
+            <ResultsView
+              response={openItem.response}
+              file={openItem}
+              onReset={() => setOpenIdx(null)}
+              resetLabel="Back to all bills"
+            />
           </div>
         )}
       </main>

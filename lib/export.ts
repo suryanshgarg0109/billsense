@@ -1,4 +1,4 @@
-import type { BillAnalysis } from "./types";
+import type { BatchItem, BillAnalysis } from "./types";
 import { costPerUnit } from "./format";
 
 function csvEscape(value: string): string {
@@ -41,6 +41,64 @@ export function toCsv(a: BillAnalysis): string {
   lines.push("", "Charge line,Amount,Category");
   for (const c of a.charges) {
     lines.push(`${csvEscape(c.label)},${c.amount},${c.category}`);
+  }
+  return lines.join("\n");
+}
+
+/** One row per bill — the spreadsheet a finance team would build by hand. */
+export function toBatchCsv(items: BatchItem[]): string {
+  const header = [
+    "File",
+    "Status",
+    "Provider",
+    "Consumer number",
+    "Tariff category",
+    "Period from",
+    "Period to",
+    "Due date",
+    "Units (kWh)",
+    "Current charges",
+    "Arrears",
+    "Total payable",
+    "Currency",
+    "Cost per unit",
+    "Critical flags",
+    "Warnings",
+  ];
+  const lines = [header.join(",")];
+
+  for (const item of items) {
+    const a = item.response?.analysis;
+    if (!a || item.status !== "done") {
+      lines.push([csvEscape(item.name), item.status === "error" ? "failed" : item.status].join(","));
+      continue;
+    }
+    if (!a.isElectricityBill) {
+      lines.push([csvEscape(item.name), "not an electricity bill"].join(","));
+      continue;
+    }
+    const cell = (v: string | number | null | undefined) =>
+      csvEscape(v === null || v === undefined ? "" : String(v));
+    lines.push(
+      [
+        cell(item.name),
+        "ok",
+        cell(a.provider.name),
+        cell(a.consumer.number),
+        cell(a.consumer.tariffCategory),
+        cell(a.billing.periodFrom),
+        cell(a.billing.periodTo),
+        cell(a.billing.dueDate),
+        cell(a.consumption.unitsKwh),
+        cell(a.totals.currentCharges),
+        cell(a.totals.arrears),
+        cell(a.totals.totalPayable),
+        cell(a.totals.currency),
+        cell(costPerUnit(a)),
+        String(a.observations.filter((o) => o.severity === "critical").length),
+        String(a.observations.filter((o) => o.severity === "warning").length),
+      ].join(",")
+    );
   }
   return lines.join("\n");
 }

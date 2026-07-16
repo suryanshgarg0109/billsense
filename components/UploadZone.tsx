@@ -6,12 +6,14 @@ import { SAMPLE_BILLS, type SampleBill } from "@/lib/samples";
 const ACCEPT = ".pdf,image/png,image/jpeg,image/webp";
 
 export function UploadZone({
-  onFile,
+  onFiles,
   onSample,
+  onSampleBatch,
   disabled,
 }: {
-  onFile: (file: File) => void;
+  onFiles: (files: File[]) => void;
   onSample: (sample: SampleBill) => void;
+  onSampleBatch: () => void;
   disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -22,10 +24,10 @@ export function UploadZone({
       e.preventDefault();
       setDragging(false);
       if (disabled) return;
-      const file = e.dataTransfer.files?.[0];
-      if (file) onFile(file);
+      const files = Array.from(e.dataTransfer.files ?? []);
+      if (files.length) onFiles(files);
     },
-    [disabled, onFile]
+    [disabled, onFiles]
   );
 
   return (
@@ -65,23 +67,24 @@ export function UploadZone({
           </svg>
         </div>
         <p className="text-base font-medium">
-          Drop your electricity bill here, or{" "}
+          Drop your electricity bills here, or{" "}
           <span className="text-accent underline decoration-amber-300 underline-offset-4">
             browse
           </span>
         </p>
         <p className="mt-2 text-sm text-ink-muted">
-          PDF or photo · scanned copies work too · max 15 MB
+          PDF or photo · scans work · up to 10 bills at once, 15 MB each
         </p>
       </button>
       <input
         ref={inputRef}
         type="file"
         accept={ACCEPT}
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) onFiles(files);
           e.target.value = "";
         }}
       />
@@ -100,6 +103,15 @@ export function UploadZone({
             {sample.label}
           </button>
         ))}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onSampleBatch}
+          title="Analyze all three sample bills as a batch"
+          className="rounded-full border border-amber-400 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-accent transition-all hover:border-accent hover:-translate-y-px active:translate-y-0"
+        >
+          ⚡ All 3 as a batch
+        </button>
       </div>
     </div>
   );

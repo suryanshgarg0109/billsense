@@ -120,10 +120,12 @@ export function ResultsView({
   response,
   file,
   onReset,
+  resetLabel = "Analyze another bill",
 }: {
   response: AnalyzeResponse;
   file: { name: string; url: string; type: string };
   onReset: () => void;
+  resetLabel?: string;
 }) {
   const a = response.analysis;
   const uncertain = new Set(a.lowConfidenceFields ?? []);
@@ -192,7 +194,7 @@ export function ResultsView({
             onClick={onReset}
             className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition-transform hover:-translate-y-px"
           >
-            Analyze another bill
+            {resetLabel}
           </button>
         </div>
       </div>
