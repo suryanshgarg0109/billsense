@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BillSense ⚡
 
-## Getting Started
+**Electricity bills, understood in seconds.**
 
-First, run the development server:
+BillSense is a working prototype that shows how multimodal AI can eliminate manual bill data entry for finance and operations teams. Upload an electricity bill — a PDF or even a photo — and within seconds you get structured data, an analyst-grade summary, anomaly observations, practical recommendations, and one-click CSV/JSON export.
+
+The emphasis is **document understanding, not OCR**: the AI reasons about tariff structures, demand penalties, power-factor norms, and arrears — it doesn't just read text off the page.
+
+## How it works
+
+1. **Upload** any electricity bill (PDF, PNG, JPEG, WebP — scanned copies work).
+2. Gemini analyzes the document against a strict extraction schema: provider, consumer, billing period, meter readings, every charge line itemized and categorized, totals, due dates.
+3. The same pass produces **business insights**: unusually high unit cost, demand-charge share, penalties detected, arrears, expiring rebates — each grounded in numbers actually on the bill.
+4. Fields the model can't find are reported as *missing*; fields it can't read confidently are *flagged* — uncertainty is communicated, never papered over.
+5. Export the structured result as CSV or JSON.
+
+## Try it without a bill
+
+Three synthetic specimen bills are bundled (fictional utilities, realistic layouts):
+
+- **Residential home** — clean slab-tariff bill
+- **Commercial office** — arrears, late-payment surcharge, excess-demand penalty
+- **Industrial HT unit** — TOD tariff, CT/PT multiplier, power-factor penalty
+
+Regenerate them anytime with `node scripts/generate-samples.js`.
+
+## Stack
+
+- **Next.js 16** (App Router) + **Tailwind CSS 4** — one deployable app, one API route
+- **Gemini 2.5 Flash** via `@google/genai` with structured JSON output (free tier)
+- No database, no auth, no persistence — files are analyzed in memory and never stored
+
+## Run locally
 
 ```bash
+git clone <this-repo>
+cd billsense
+npm install
+cp .env.example .env.local   # then paste your key into .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and set it in `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+GEMINI_API_KEY=your-key-here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Deploy
 
-To learn more about Next.js, take a look at the following resources:
+One-command deploy on Vercel's free tier:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+vercel --prod
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Add `GEMINI_API_KEY` as an environment variable in the Vercel project settings.
 
-## Deploy on Vercel
+## Project notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `app/api/analyze/route.ts` — the single API route: validates the upload, sends it inline to Gemini with a response schema, returns typed JSON.
+- `lib/prompt.ts` — the analysis prompt and schema. This is where the product lives: extraction rules, insight severity rubric, and an instruction to treat document text as data (prompt-injection resistance).
+- `components/ResultsView.tsx` — results UI: document preview alongside extracted data, charge breakdown with proportion bars, severity-badged observations, confidence footnotes.
+- Derived figures (cost per unit) are computed in the client, not by the model, so the AI never does arithmetic it could get wrong.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+*Built as an interview prototype. Specimen bills are synthetic; no real utility, consumer, or bill data is included.*

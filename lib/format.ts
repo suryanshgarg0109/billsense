@@ -18,7 +18,7 @@ export function formatMoney(
       style: "currency",
       currency: code,
       maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
+      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     }).format(amount);
   } catch {
     return `${code} ${amount.toLocaleString("en-IN")}`;
