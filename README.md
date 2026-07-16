@@ -2,6 +2,8 @@
 
 **Electricity bills, understood in seconds.**
 
+**Live demo:** [billsense-ten.vercel.app](https://billsense-ten.vercel.app) · **Repo:** [github.com/suryanshgarg0109/billsense](https://github.com/suryanshgarg0109/billsense)
+
 BillSense is a working prototype that shows how multimodal AI can eliminate manual bill data entry for finance and operations teams. Upload an electricity bill — a PDF or even a photo — and within seconds you get structured data, an analyst-grade summary, anomaly observations, practical recommendations, and one-click CSV/JSON export.
 
 The emphasis is **document understanding, not OCR**: the AI reasons about tariff structures, demand penalties, power-factor norms, and arrears — it doesn't just read text off the page.
@@ -27,7 +29,7 @@ Regenerate them anytime with `node scripts/generate-samples.js`.
 ## Stack
 
 - **Next.js 16** (App Router) + **Tailwind CSS 4** — one deployable app, one API route
-- **Gemini 2.5 Flash** via `@google/genai` with structured JSON output (free tier)
+- **Gemini** (`gemini-3.1-flash-lite` primary, with an automatic fallback chain) via `@google/genai`, structured JSON output, free tier
 - No database, no auth, no persistence — files are analyzed in memory and never stored
 
 ## Run locally
