@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* BillSense design tokens — deliberately light-only so the demo looks identical everywhere. */
+:root {
+  --paper: #f6f5f1;
+  --surface: #ffffff;
+  --ink: #191813;
+  --ink-soft: #4a4738;
+  --ink-muted: #807b6c;
+  --line: #e8e5dc;
+  --line-strong: #d9d5c8;
+  --accent: #b45309;
+  --spark: #f59e0b;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-spark: var(--spark);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #fde68a;
+}
+
+/* --- motion --- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scan {
+  0% {
+    top: 8%;
+  }
+  50% {
+    top: 88%;
+  }
+  100% {
+    top: 8%;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-scan {
+  animation: scan 2.4s ease-in-out infinite;
+}
+
+.animate-bar {
+  transform-origin: left;
+  animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-scan,
+  .animate-bar,
+  .animate-soft-pulse {
+    animation: none;
+  }
+}
