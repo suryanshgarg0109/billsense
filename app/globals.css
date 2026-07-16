@@ -81,6 +81,86 @@ body {
   }
 }
 
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ambient background orbs */
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(70px, -50px) scale(1.15);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-80px, 60px) scale(0.92);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.95);
+  }
+  50% {
+    transform: translate(50px, 70px) scale(1.12);
+  }
+}
+
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.orb-a {
+  width: 42rem;
+  height: 42rem;
+  top: -14rem;
+  left: -10rem;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.2), transparent 70%);
+  animation: drift-a 18s ease-in-out infinite;
+}
+
+.orb-b {
+  width: 36rem;
+  height: 36rem;
+  top: 10%;
+  right: -12rem;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.16), transparent 70%);
+  animation: drift-b 24s ease-in-out infinite;
+}
+
+.orb-c {
+  width: 38rem;
+  height: 38rem;
+  bottom: -16rem;
+  left: 28%;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.14), transparent 70%);
+  animation: drift-c 28s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3.2s ease-in-out infinite;
+}
+
 .animate-fade-up {
   animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -102,7 +182,9 @@ body {
   .animate-fade-up,
   .animate-scan,
   .animate-bar,
-  .animate-soft-pulse {
+  .animate-soft-pulse,
+  .animate-float,
+  .orb {
     animation: none;
   }
 }

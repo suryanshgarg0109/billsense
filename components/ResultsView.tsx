@@ -1,8 +1,9 @@
 "use client";
 
-import type { AnalyzeResponse, BillAnalysis, ChargeCategory, Severity } from "@/lib/types";
+import type { AnalyzeResponse, ChargeCategory, Severity } from "@/lib/types";
 import { costPerUnit, formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { download, toCsv } from "@/lib/export";
+import { CountUp } from "@/components/CountUp";
 
 /* ---------- field labels (also used to explain confidence caveats) ---------- */
 
@@ -40,14 +41,19 @@ function Card({
   title,
   children,
   className = "",
+  delayMs,
 }: {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  delayMs?: number;
 }) {
   return (
     <section
-      className={`rounded-2xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(25,24,19,0.04),0_8px_24px_rgba(25,24,19,0.05)] ${className}`}
+      className={`rounded-2xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(25,24,19,0.04),0_8px_24px_rgba(25,24,19,0.05)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(25,24,19,0.04),0_14px_36px_rgba(25,24,19,0.09)] ${
+        delayMs !== undefined ? "animate-fade-up" : ""
+      } ${className}`}
+      style={delayMs !== undefined ? { animationDelay: `${delayMs}ms` } : undefined}
     >
       {title && (
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
@@ -194,7 +200,10 @@ export function ResultsView({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         {/* left: original document */}
         <div className="order-2 lg:order-1">
-          <div className="lg:sticky lg:top-6 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(25,24,19,0.04),0_8px_24px_rgba(25,24,19,0.05)]">
+          <div
+            className="animate-fade-up lg:sticky lg:top-6 overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(25,24,19,0.04),0_8px_24px_rgba(25,24,19,0.05)]"
+            style={{ animationDelay: "120ms" }}
+          >
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
                 Original document
@@ -216,28 +225,49 @@ export function ResultsView({
         {/* right: intelligence */}
         <div className="order-1 space-y-6 lg:order-2">
           {/* summary + headline numbers */}
-          <Card title="AI summary">
+          <Card title="AI summary" delayMs={0}>
             <p className="text-[15px] leading-relaxed text-ink-soft">{a.summary}</p>
             <div className="mt-6 grid grid-cols-2 gap-4 border-t border-line pt-5 sm:grid-cols-4">
               <div>
                 <p className="text-[13px] text-ink-muted">Total payable</p>
                 <p className="mt-0.5 text-xl font-semibold tracking-tight">
-                  {formatMoney(a.totals.totalPayable, currency)}
+                  {a.totals.totalPayable !== null ? (
+                    <CountUp
+                      value={a.totals.totalPayable}
+                      format={(n) => formatMoney(Math.round(n), currency)}
+                    />
+                  ) : (
+                    "—"
+                  )}
                 </p>
               </div>
               <div>
                 <p className="text-[13px] text-ink-muted">Units consumed</p>
                 <p className="mt-0.5 text-xl font-semibold tracking-tight">
-                  {formatNumber(a.consumption.unitsKwh)}
-                  {a.consumption.unitsKwh !== null && (
-                    <span className="ml-1 text-sm font-normal text-ink-muted">kWh</span>
+                  {a.consumption.unitsKwh !== null ? (
+                    <>
+                      <CountUp
+                        value={a.consumption.unitsKwh}
+                        format={(n) => formatNumber(Math.round(n))}
+                      />
+                      <span className="ml-1 text-sm font-normal text-ink-muted">kWh</span>
+                    </>
+                  ) : (
+                    "—"
                   )}
                 </p>
               </div>
               <div>
                 <p className="text-[13px] text-ink-muted">Cost per unit</p>
                 <p className="mt-0.5 text-xl font-semibold tracking-tight">
-                  {perUnit !== null ? formatMoney(perUnit, currency) : "—"}
+                  {perUnit !== null ? (
+                    <CountUp
+                      value={perUnit}
+                      format={(n) => formatMoney(Math.round(n * 100) / 100, currency)}
+                    />
+                  ) : (
+                    "—"
+                  )}
                 </p>
               </div>
               <div>
@@ -250,7 +280,7 @@ export function ResultsView({
           </Card>
 
           {/* extracted details */}
-          <Card title="Extracted details">
+          <Card title="Extracted details" delayMs={90}>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
               <Fact
                 label="Provider"
@@ -353,10 +383,13 @@ export function ResultsView({
 
           {/* charge breakdown */}
           {a.charges.length > 0 && (
-            <Card title="Charge breakdown">
-              <ul className="space-y-3">
+            <Card title="Charge breakdown" delayMs={180}>
+              <ul className="space-y-1">
                 {a.charges.map((c, i) => (
-                  <li key={`${c.label}-${i}`}>
+                  <li
+                    key={`${c.label}-${i}`}
+                    className="-mx-2 rounded-lg px-2 py-1 transition-colors duration-150 hover:bg-paper"
+                  >
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[14px]">{c.label}</span>
@@ -401,14 +434,14 @@ export function ResultsView({
 
           {/* observations */}
           {a.observations.length > 0 && (
-            <Card title="What the AI noticed">
+            <Card title="What the AI noticed" delayMs={270}>
               <ul className="space-y-3">
                 {a.observations.map((o, i) => {
                   const s = SEVERITY_STYLES[o.severity] ?? SEVERITY_STYLES.info;
                   return (
                     <li
                       key={i}
-                      className={`rounded-xl border border-line border-l-4 bg-paper/60 p-4 ${s.border}`}
+                      className={`rounded-xl border border-line border-l-4 bg-paper/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-paper hover:shadow-[0_6px_16px_rgba(25,24,19,0.07)] ${s.border}`}
                     >
                       <div className="flex items-center gap-2.5">
                         <span
@@ -430,10 +463,13 @@ export function ResultsView({
 
           {/* recommendations */}
           {a.recommendations.length > 0 && (
-            <Card title="Suggested actions">
+            <Card title="Suggested actions" delayMs={360}>
               <ol className="space-y-3.5">
                 {a.recommendations.map((r, i) => (
-                  <li key={i} className="flex gap-3.5">
+                  <li
+                    key={i}
+                    className="-mx-2 flex gap-3.5 rounded-lg px-2 py-1 transition-colors duration-150 hover:bg-paper"
+                  >
                     <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[12px] font-semibold text-white">
                       {i + 1}
                     </span>

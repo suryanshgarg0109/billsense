@@ -47,7 +47,7 @@ export function UploadZone({
               : "border-line-strong hover:border-ink-muted hover:bg-white"
           }`}
       >
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper ring-1 ring-line transition-transform duration-200 group-hover:-translate-y-0.5">
+        <div className="animate-float mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper ring-1 ring-line transition-shadow duration-200 group-hover:shadow-[0_6px_16px_rgba(25,24,19,0.12)]">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M12 16V4m0 0 4.5 4.5M12 4 7.5 8.5"
